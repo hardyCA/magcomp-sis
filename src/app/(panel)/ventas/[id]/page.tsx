@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requirePermiso } from "@/lib/session";
@@ -93,7 +94,7 @@ export default async function VentaDetallePage({
         </div>
       ) : null}
 
-      <article className="card bg-base-100 shadow print:shadow-none">
+      <article id="boleta" className="card bg-base-100 shadow print:shadow-none">
         <div className="card-body relative">
           {anulada ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -103,6 +104,14 @@ export default async function VentaDetallePage({
             </div>
           ) : null}
           <header className="border-b border-base-200 pb-4 text-center">
+            <Image
+              src="/logo.png"
+              alt="Logo MAG COMP"
+              width={64}
+              height={64}
+              className="mx-auto mb-2 h-14 w-14 object-contain"
+              priority
+            />
             <h1 className="text-2xl font-bold tracking-tight">MAG COMP</h1>
             <p className="mt-1 text-sm text-base-content/60">Boleta de venta</p>
           </header>
@@ -116,17 +125,13 @@ export default async function VentaDetallePage({
               <span className="text-base-content/60">Fecha:</span>{" "}
               {new Date(venta.fecha).toLocaleString("es-BO")}
             </p>
-            <p>
+            <p className="sm:col-span-2">
               <span className="text-base-content/60">Cliente:</span>{" "}
               <span className="font-semibold">{cliente ?? "—"}</span>
             </p>
-            <p>
+            <p className="sm:col-span-2">
               <span className="text-base-content/60">Vendedor:</span>{" "}
               {nombreVendedor ?? "—"}
-            </p>
-            <p className="text-right">
-              <span className="text-base-content/60">Tipo de cambio:</span>{" "}
-              1 USD = {venta.tipo_cambio} Bs
             </p>
           </div>
 
