@@ -29,32 +29,13 @@ export async function login(_prevState: AuthState, formData: FormData): Promise<
   redirect(destino);
 }
 
-export async function signup(_prevState: AuthState, formData: FormData): Promise<AuthState> {
-  const supabase = await createClient();
-
-  const nombre = String(formData.get("nombre") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!nombre || !email || !password) {
-    return { error: "Completa todos los campos." };
-  }
-
-  if (password.length < 6) {
-    return { error: "La contraseña debe tener al menos 6 caracteres." };
-  }
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { nombre } },
-  });
-
-  if (error) {
-    return { error: "No se pudo registrar el usuario." };
-  }
-
-  redirect("/login?registrado=1");
+export async function signup(
+  _prevState: AuthState,
+  _formData: FormData
+): Promise<AuthState> {
+  return {
+    error: "El registro está desactivado. Pide una cuenta al administrador.",
+  };
 }
 
 export async function logout(): Promise<void> {

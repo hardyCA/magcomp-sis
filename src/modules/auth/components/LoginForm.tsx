@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { login, type AuthState } from "@/modules/auth/actions";
 
@@ -53,13 +52,6 @@ export function LoginForm({ next }: { next?: string }) {
             {pending ? "Ingresando..." : "Ingresar"}
           </button>
         </div>
-
-        <p className="mt-3 text-center text-sm text-base-content/60">
-          ¿No tienes cuenta?{" "}
-          <Link href="/registro" className="link link-primary">
-            Regístrate
-          </Link>
-        </p>
       </div>
     </form>
   );
