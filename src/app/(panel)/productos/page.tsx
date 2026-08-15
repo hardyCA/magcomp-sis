@@ -5,6 +5,7 @@ import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/conf
 import { formatMoneda, convertirPrecio } from "@/utils/format";
 import { type Moneda } from "@/utils/moneda";
 import { toggleProducto } from "@/modules/productos/actions";
+import { ImportarProductos } from "@/modules/productos/components/ImportarProductos";
 import { FiltrosProductos } from "@/modules/productos/components/FiltrosProductos";
 
 type ProductoRow = {
@@ -138,9 +139,12 @@ export default async function ProductosPage({
           </p>
         </div>
         {esAdmin ? (
-          <Link href="/productos/nuevo" className="btn btn-primary">
-            Nuevo producto
-          </Link>
+          <div className="flex items-center gap-2">
+            <ImportarProductos />
+            <Link href="/productos/nuevo" className="btn btn-primary">
+              Nuevo producto
+            </Link>
+          </div>
         ) : null}
       </div>
 

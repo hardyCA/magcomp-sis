@@ -14,6 +14,21 @@ import { type Moneda } from "@/utils/moneda";
 
 export type ProductoState = { error?: string } | undefined;
 
+export type ImportarProductosState =
+  | { error?: string; importados?: number; errores?: string[] }
+  | undefined;
+
+type FilaImportada = {
+  nombre?: unknown;
+  codigo_barras?: unknown;
+  categoria?: unknown;
+  marca?: unknown;
+  precio?: unknown;
+  stock?: unknown;
+  stock_minimo?: unknown;
+  activo?: unknown;
+};
+
 const MAX_IMAGEN_BYTES = 2 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -264,4 +279,177 @@ export async function toggleProducto(formData: FormData): Promise<void> {
   await supabase.from("productos").update({ activo: !activo }).eq("id", id);
 
   revalidatePath("/productos");
+}
+
+export async function importarProductos(
+  _prevState: ImportarProductosState,
+  formData: FormData
+): Promise<ImportarProductosState> {
+  await requireAdmin();
+
+  let filas: FilaImportada[] = [];
+  try {
+    const raw = String(formData.get("filas") ?? "");
+    filas = JSON.parse(raw) as FilaImportada[];
+  } catch {
+    return { error: "No se pudo leer el archivo." };
+  }
+
+  if (!Array.isArray(filas) || filas.length === 0) {
+    return { error: "El archivo no tiene productos para importar." };
+  }
+  if (filas.length > 2000) {
+    return { error: "El archivo supera los 2000 productos. Reduce la cantidad." };
+  }
+
+  const supabase = await createClient();
+
+  const [monedaBase, monedaDisplay, tasa] = await Promise.all([
+    getMonedaBase(),
+    getMonedaDisplay(),
+    getTipoCambioGlobal(),
+  ]);
+
+  const [{ data: categorias }, { data: marcas }] = await Promise.all([
+    supabase.from("categorias").select("id, nombre"),
+    supabase.from("marcas").select("id, nombre"),
+  ]);
+
+  const categoriaId = new Map(
+    (categorias ?? []).map((c) => [c.nombre.trim().toLowerCase(), c.id])
+  );
+  const marcaId = new Map(
+    (marcas ?? []).map((m) => [m.nombre.trim().toLowerCase(), m.id])
+  );
+
+  const errores: string[] = [];
+  const categoriasNuevas = new Set<string>();
+  const marcasNuevas = new Set<string>();
+
+  const productos: Array<{
+    nombre: string;
+    codigo_barras: string | null;
+    categoria: string | null;
+    marca: string | null;
+    precio_venta: number;
+    moneda: Moneda;
+    stock: number;
+    stock_minimo: number;
+    activo: boolean;
+  }> = [];
+
+  filas.forEach((fila, i) => {
+    const nroFila = i + 2;
+
+    const nombre = String(fila.nombre ?? "").trim();
+    if (!nombre) {
+      errores.push(`Fila ${nroFila}: falta el nombre.`);
+      return;
+    }
+
+    const precio = Number(fila.precio);
+    if (!Number.isFinite(precio) || precio < 0) {
+      errores.push(`Fila ${nroFila} ("${nombre}"): precio inválido.`);
+      return;
+    }
+
+    const stock = Number(fila.stock);
+    if (!Number.isInteger(stock) || stock < 0) {
+      errores.push(`Fila ${nroFila} ("${nombre}"): stock inválido.`);
+      return;
+    }
+
+    const stockMinimo = Number(fila.stock_minimo);
+    if (!Number.isInteger(stockMinimo) || stockMinimo < 0) {
+      errores.push(`Fila ${nroFila} ("${nombre}"): stock mínimo inválido.`);
+      return;
+    }
+
+    const categoria = String(fila.categoria ?? "").trim() || null;
+    const marca = String(fila.marca ?? "").trim() || null;
+
+    const catClave = categoria?.toLowerCase() ?? null;
+    const marClave = marca?.toLowerCase() ?? null;
+
+    productos.push({
+      nombre,
+      codigo_barras: String(fila.codigo_barras ?? "").trim() || null,
+      categoria,
+      marca,
+      precio_venta: convertirPrecio(precio, monedaDisplay, monedaBase, tasa),
+      moneda: monedaBase,
+      stock,
+      stock_minimo: stockMinimo,
+      activo:
+        String(fila.activo ?? "").trim().toLowerCase() === ""
+          ? true
+          : !["no", "0", "false", "inactivo"].includes(
+              String(fila.activo).trim().toLowerCase()
+            ),
+    });
+
+    if (catClave && !categoriaId.has(catClave)) {
+      categoriasNuevas.add(categoria as string);
+    }
+    if (marClave && !marcaId.has(marClave)) {
+      marcasNuevas.add(marca as string);
+    }
+  });
+
+  if (categoriasNuevas.size > 0) {
+    const { data, error } = await supabase
+      .from("categorias")
+      .insert([...categoriasNuevas].map((nombre) => ({ nombre })))
+      .select("id, nombre");
+    if (error) {
+      console.error("[productos] error creando categorías:", error);
+      return { error: "No se pudieron crear las categorías nuevas." };
+    }
+    for (const c of data ?? []) {
+      categoriaId.set(c.nombre.trim().toLowerCase(), c.id);
+    }
+  }
+
+  if (marcasNuevas.size > 0) {
+    const { data, error } = await supabase
+      .from("marcas")
+      .insert([...marcasNuevas].map((nombre) => ({ nombre })))
+      .select("id, nombre");
+    if (error) {
+      console.error("[productos] error creando marcas:", error);
+      return { error: "No se pudieron crear las marcas nuevas." };
+    }
+    for (const m of data ?? []) {
+      marcaId.set(m.nombre.trim().toLowerCase(), m.id);
+    }
+  }
+
+  const { error: errorInsert } = await supabase.from("productos").insert(
+    productos.map((p) => ({
+      nombre: p.nombre,
+      codigo_barras: p.codigo_barras,
+      categoria_id: p.categoria
+        ? (categoriaId.get(p.categoria.toLowerCase()) ?? null)
+        : null,
+      marca_id: p.marca ? (marcaId.get(p.marca.toLowerCase()) ?? null) : null,
+      precio_venta: p.precio_venta,
+      moneda: p.moneda,
+      stock: p.stock,
+      stock_minimo: p.stock_minimo,
+      activo: p.activo,
+    }))
+  );
+
+  if (errorInsert) {
+    console.error("[productos] error importando productos:", errorInsert);
+    return {
+      error: "No se pudo importar. Detalle: " + errorInsert.message,
+      importados: 0,
+      errores,
+    };
+  }
+
+  revalidatePath("/productos");
+
+  return { importados: productos.length, errores };
 }
