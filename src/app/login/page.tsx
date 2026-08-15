@@ -4,7 +4,7 @@ import { LoginForm } from "@/modules/auth/components/LoginForm";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; registrado?: string }>;
+  searchParams: Promise<{ next?: string; registrado?: string; inactivo?: string }>;
 }) {
   const params = await searchParams;
 
@@ -13,6 +13,12 @@ export default async function LoginPage({
       {params.registrado ? (
         <div role="alert" className="alert alert-success mb-4 max-w-sm text-sm">
           <span>Cuenta creada. Revisa tu correo para confirmarla antes de ingresar.</span>
+        </div>
+      ) : null}
+
+      {params.inactivo ? (
+        <div role="alert" className="alert alert-error mb-4 max-w-sm text-sm">
+          <span>Tu usuario está desactivado. Contacta al administrador.</span>
         </div>
       ) : null}
 

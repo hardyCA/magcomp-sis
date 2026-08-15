@@ -37,6 +37,7 @@ export function Sidebar({
           { href: "/marcas", label: "Marcas" },
           { href: "/clientes", label: "Clientes" },
           { href: "/reportes", label: "Reportes" },
+          { href: "/usuarios", label: "Usuarios y roles" },
           { href: "/configuracion", label: "Configuración" },
         ]
       : []),

@@ -41,24 +41,20 @@ export const getProfile = cache(async (): Promise<UserProfile | null> => {
 });
 
 export async function requireUser() {
-  const supabase = await createClient();
+  const profile = await getProfile();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+  if (!profile || !profile.activo) {
+    redirect("/login?inactivo=1");
   }
 
-  return user;
+  return profile;
 }
 
 export async function requireAdmin(): Promise<UserProfile> {
   const profile = await getProfile();
 
-  if (!profile) {
-    redirect("/login");
+  if (!profile || !profile.activo) {
+    redirect("/login?inactivo=1");
   }
 
   if (profile.rol !== "ADMINISTRADOR") {

@@ -14,8 +14,8 @@ export default async function PanelLayout({
     getMonedaDisplay(),
   ]);
 
-  if (!profile) {
-    redirect("/login");
+  if (!profile || !profile.activo) {
+    redirect("/login?inactivo=1");
   }
 
   return (

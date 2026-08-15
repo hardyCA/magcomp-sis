@@ -514,6 +514,18 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      obtener_usuarios: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          nombre: string;
+          email: string;
+          rol_id: number | null;
+          rol_nombre: string | null;
+          activo: boolean;
+          created_at: string;
+        }[];
+      };
       registrar_movimiento_inventario: {
         Args: {
           p_producto_id: number;
