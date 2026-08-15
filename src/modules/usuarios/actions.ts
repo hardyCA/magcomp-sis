@@ -162,3 +162,62 @@ export async function guardarPermisosRol(
   revalidatePath("/usuarios");
   redirect("/usuarios");
 }
+
+export async function cambiarContrasena(
+  _prevState: UsuarioState,
+  formData: FormData
+): Promise<UsuarioState> {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirmacion = String(formData.get("confirmacion") ?? "");
+
+  if (!id) {
+    return { error: "Usuario no válido." };
+  }
+
+  if (!password) {
+    return { error: "Ingresa la nueva contraseña." };
+  }
+
+  if (password.length < 6) {
+    return { error: "La contraseña debe tener al menos 6 caracteres." };
+  }
+
+  if (password !== confirmacion) {
+    return { error: "Las contraseñas no coinciden." };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.auth.admin.updateUserById(id, {
+    password,
+  });
+
+  if (error) {
+    return { error: "No se pudo cambiar la contraseña. Intenta de nuevo." };
+  }
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios");
+}
+
+export async function eliminarUsuario(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+
+  if (!id) {
+    return;
+  }
+
+  if (id === admin.id) {
+    redirect("/usuarios");
+  }
+
+  const adminClient = createAdminClient();
+  await adminClient.auth.admin.deleteUser(id);
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios");
+}
