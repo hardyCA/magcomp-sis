@@ -6,6 +6,7 @@ import { obtenerNombresUsuarios } from "@/lib/profiles";
 import { formatMoneda } from "@/utils/format";
 import { type Moneda } from "@/utils/moneda";
 import { BotonImprimir } from "@/modules/ventas/components/BotonImprimir";
+import { BotonAnular } from "@/modules/ventas/components/BotonAnular";
 
 type DetalleRow = {
   id: number;
@@ -20,7 +21,8 @@ export default async function VentaDetallePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermiso("ventas");
+  const profile = await requirePermiso("ventas");
+  const esAdmin = profile.rol === "ADMINISTRADOR";
 
   const { id } = await params;
   const supabase = await createClient();
@@ -29,7 +31,7 @@ export default async function VentaDetallePage({
     supabase
       .from("ventas")
       .select(
-        "id, numero, fecha, moneda, tipo_cambio, subtotal, descuento, total, usuario_id, cliente_id, clientes(nombre)"
+        "id, numero, fecha, moneda, tipo_cambio, subtotal, descuento, total, usuario_id, cliente_id, estado, motivo_anulacion, anulada_por, anulada_en, clientes(nombre)"
       )
       .eq("id", Number(id))
       .maybeSingle(),
@@ -46,12 +48,17 @@ export default async function VentaDetallePage({
 
   const items = (detalles ?? []) as unknown as DetalleRow[];
   const moneda = venta.moneda as Moneda;
-  const vendedor = (
-    await obtenerNombresUsuarios([venta.usuario_id])
-  ).get(venta.usuario_id ?? "");
+  const [vendedor, anulador] = await Promise.all([
+    obtenerNombresUsuarios([venta.usuario_id]),
+    venta.anulada_por ? obtenerNombresUsuarios([venta.anulada_por]) : Promise.resolve(new Map<string, string>()),
+  ]);
+  const nombreVendedor = vendedor.get(venta.usuario_id ?? "");
+  const nombreAnulador = anulador.get(venta.anulada_por ?? "");
   const cliente = Array.isArray(venta.clientes)
     ? null
     : venta.clientes?.nombre ?? null;
+
+  const anulada = venta.estado === "ANULADA";
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -59,11 +66,42 @@ export default async function VentaDetallePage({
         <Link href="/ventas" className="btn btn-ghost btn-sm">
           ← Nueva venta
         </Link>
-        <BotonImprimir />
+        <div className="flex items-center gap-1">
+          {esAdmin && !anulada ? (
+            <BotonAnular ventaId={venta.id} numero={venta.numero} />
+          ) : null}
+          <BotonImprimir />
+        </div>
       </div>
 
+      {anulada ? (
+        <div className="mb-4 rounded-box border-2 border-error bg-error/10 p-4 text-center">
+          <p className="text-lg font-bold tracking-wide text-error">
+            VENTA ANULADA
+          </p>
+          {venta.motivo_anulacion ? (
+            <p className="mt-1 text-sm text-base-content/70">
+              Motivo: {venta.motivo_anulacion}
+            </p>
+          ) : null}
+          {venta.anulada_en ? (
+            <p className="mt-1 text-xs text-base-content/60">
+              Anulada el {new Date(venta.anulada_en).toLocaleString("es-BO")}
+              {nombreAnulador ? ` por ${nombreAnulador}` : ""}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <article className="card bg-base-100 shadow print:shadow-none">
-        <div className="card-body">
+        <div className="card-body relative">
+          {anulada ? (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+              <span className="rotate-[-20deg] rounded-box border-4 border-error px-6 py-2 text-4xl font-black tracking-widest text-error/40">
+                ANULADA
+              </span>
+            </div>
+          ) : null}
           <header className="border-b border-base-200 pb-4 text-center">
             <h1 className="text-2xl font-bold tracking-tight">MAG COMP</h1>
             <p className="mt-1 text-sm text-base-content/60">Boleta de venta</p>
@@ -84,7 +122,7 @@ export default async function VentaDetallePage({
             </p>
             <p>
               <span className="text-base-content/60">Vendedor:</span>{" "}
-              {vendedor ?? "—"}
+              {nombreVendedor ?? "—"}
             </p>
             <p className="text-right">
               <span className="text-base-content/60">Tipo de cambio:</span>{" "}
@@ -139,7 +177,9 @@ export default async function VentaDetallePage({
           </div>
 
           <p className="mt-4 text-center text-xs text-base-content/50">
-            Gracias por su compra
+            {anulada
+              ? "Venta anulada — el stock fue devuelto al inventario"
+              : "Gracias por su compra"}
           </p>
         </div>
       </article>

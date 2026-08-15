@@ -106,12 +106,20 @@ export default async function InventarioPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inventario</h1>
-        <p className="mt-1 text-base-content/60">
-          Selecciona un producto para ver su detalle, registrar movimientos y
-          consultar su historial.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Inventario</h1>
+          <p className="mt-1 text-base-content/60">
+            Selecciona un producto para ver su detalle, registrar movimientos y
+            consultar su historial.
+          </p>
+        </div>
+        <a
+          href="/api/inventario/catalogo/pdf"
+          className="btn btn-outline btn-sm self-start"
+        >
+          Descargar catálogo PDF (para clientes)
+        </a>
       </div>
 
       <form method="get" className="card bg-base-100 shadow">

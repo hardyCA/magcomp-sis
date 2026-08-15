@@ -4,6 +4,7 @@ import { obtenerNombresUsuarios } from "@/lib/profiles";
 import { formatMoneda } from "@/utils/format";
 import { type Moneda } from "@/utils/moneda";
 import { Paginador } from "@/components/Paginador";
+import { BotonAnular } from "@/modules/ventas/components/BotonAnular";
 
 const POR_PAGINA = 15;
 
@@ -15,10 +16,17 @@ type VentaRow = {
   moneda: Moneda;
   total: number;
   descuento: number;
+  estado: "ACTIVA" | "ANULADA";
   clientes: { nombre: string } | null;
 };
 
-export async function VentasLista({ pagina = 1 }: { pagina?: number }) {
+export async function VentasLista({
+  pagina = 1,
+  esAdmin = false,
+}: {
+  pagina?: number;
+  esAdmin?: boolean;
+}) {
   const supabase = await createClient();
 
   const desde = (pagina - 1) * POR_PAGINA;
@@ -28,7 +36,7 @@ export async function VentasLista({ pagina = 1 }: { pagina?: number }) {
     supabase
       .from("ventas")
       .select(
-        "id, numero, usuario_id, fecha, moneda, total, descuento, clientes(nombre)",
+        "id, numero, usuario_id, fecha, moneda, total, descuento, estado, clientes(nombre)",
         { count: "exact" }
       )
       .order("fecha", { ascending: false })
@@ -73,7 +81,14 @@ export async function VentasLista({ pagina = 1 }: { pagina?: number }) {
             ) : (
               ventas.map((venta) => (
                 <tr key={venta.id}>
-                  <td className="font-mono font-semibold">{venta.numero}</td>
+                  <td className="font-mono font-semibold">
+                    {venta.numero}
+                    {venta.estado === "ANULADA" ? (
+                      <span className="ml-2 badge badge-error badge-sm">
+                        ANULADA
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="whitespace-nowrap text-sm">
                     {new Date(venta.fecha).toLocaleString("es-BO")}
                   </td>
@@ -84,7 +99,9 @@ export async function VentasLista({ pagina = 1 }: { pagina?: number }) {
                   </td>
                   <td>{nombres.get(venta.usuario_id) ?? "—"}</td>
                   <td className="text-right font-semibold">
-                    {formatMoneda(venta.total, venta.moneda)}
+                    <span className={venta.estado === "ANULADA" ? "line-through opacity-60" : ""}>
+                      {formatMoneda(venta.total, venta.moneda)}
+                    </span>
                     {venta.descuento > 0 ? (
                       <span className="ml-1 badge badge-outline badge-sm">
                         -{formatMoneda(venta.descuento, venta.moneda)}
@@ -92,12 +109,20 @@ export async function VentasLista({ pagina = 1 }: { pagina?: number }) {
                     ) : null}
                   </td>
                   <td className="text-right">
-                    <Link
-                      href={`/ventas/${venta.id}`}
-                      className="btn btn-ghost btn-sm"
-                    >
-                      Ver boleta
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/ventas/${venta.id}`}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        Ver boleta
+                      </Link>
+                      {esAdmin && venta.estado === "ACTIVA" ? (
+                        <BotonAnular
+                          ventaId={venta.id}
+                          numero={venta.numero}
+                        />
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))

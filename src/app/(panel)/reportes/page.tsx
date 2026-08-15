@@ -73,6 +73,7 @@ export default async function ReportesPage({
     supabase
       .from("ventas")
       .select("id, fecha, moneda, tipo_cambio, total")
+      .eq("estado", "ACTIVA")
       .gte("fecha", desdeISO)
       .lte("fecha", hastaISO),
     supabase
@@ -80,6 +81,7 @@ export default async function ReportesPage({
       .select(
         "producto_id, cantidad, subtotal, ventas!inner(moneda, tipo_cambio), productos!inner(nombre)"
       )
+      .eq("ventas.estado", "ACTIVA")
       .gte("ventas.fecha", desdeISO)
       .lte("ventas.fecha", hastaISO),
     supabase
@@ -191,7 +193,12 @@ export default async function ReportesPage({
   );
 
   const movimientos = (movimientosRes.data ?? []) as {
-    tipo_movimiento: "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA";
+    tipo_movimiento:
+      | "ENTRADA"
+      | "SALIDA"
+      | "AJUSTE"
+      | "VENTA"
+      | "ANULACION";
     cantidad: number;
     productos: {
       categoria_id: number | null;

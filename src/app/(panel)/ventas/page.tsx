@@ -2,6 +2,7 @@ import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/config";
 import { type Moneda } from "@/utils/moneda";
+import { PRODUCTOS_POR_PAGINA } from "@/modules/ventas/constantes";
 import {
   VentaPOS,
   type ProductoVenta,
@@ -12,13 +13,17 @@ export default async function VentasPage() {
 
   const supabase = await createClient();
 
-  const [{ data: productos }, { data: clientes }, tasa, monedaBase, monedaDisplay] =
+  const [{ data: productos, count }, { data: clientes }, tasa, monedaBase, monedaDisplay] =
     await Promise.all([
       supabase
         .from("productos")
-        .select("id, nombre, codigo_barras, imagen, precio_venta, moneda, stock")
+        .select("id, nombre, codigo_barras, imagen, precio_venta, moneda, stock", {
+          count: "exact",
+        })
         .eq("activo", true)
-        .order("nombre"),
+        .gt("stock", 0)
+        .order("nombre")
+        .range(0, PRODUCTOS_POR_PAGINA - 1),
       supabase
         .from("clientes")
         .select("id, nombre")
@@ -29,6 +34,7 @@ export default async function VentasPage() {
     ]);
 
   const lista = (productos ?? []) as unknown as ProductoVenta[];
+  const totalPaginas = Math.max(1, Math.ceil((count ?? 0) / PRODUCTOS_POR_PAGINA));
   const clientesLista = (clientes ?? []) as unknown as { id: number; nombre: string }[];
   const moneda = monedaDisplay as Moneda;
 
@@ -42,7 +48,8 @@ export default async function VentasPage() {
       </div>
 
       <VentaPOS
-        productos={lista}
+        productosIniciales={lista}
+        totalPaginasInicial={totalPaginas}
         clientes={clientesLista}
         tasa={tasa}
         monedaBase={monedaBase}

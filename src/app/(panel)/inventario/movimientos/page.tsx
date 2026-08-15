@@ -90,7 +90,7 @@ export default async function MovimientosPage({
   if (tipo) {
     query = query.eq(
       "tipo_movimiento",
-      tipo as "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA"
+      tipo as "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA" | "ANULACION"
     );
   }
   if (aplicarProducto) {
@@ -361,5 +361,6 @@ function badgeTipo(tipo: string) {
   if (tipo === "ENTRADA") return "badge-success";
   if (tipo === "SALIDA") return "badge-warning";
   if (tipo === "AJUSTE") return "badge-info";
+  if (tipo === "ANULACION") return "badge-error";
   return "badge-neutral";
 }

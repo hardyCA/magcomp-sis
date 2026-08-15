@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requireAdmin, requireUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { esMoneda, type Moneda } from "@/utils/moneda";
 
 export type VentaState = { error?: string } | undefined;
+
+export type AnularVentaState = { error?: string } | undefined;
 
 export type ItemVenta = { producto_id: number; cantidad: number };
 
@@ -96,4 +98,49 @@ export async function registrarVenta(
   revalidatePath("/ventas");
 
   redirect(`/ventas/${data.id}`);
+}
+
+export async function anularVenta(
+  _prevState: AnularVentaState,
+  formData: FormData
+): Promise<AnularVentaState> {
+  await requireAdmin();
+
+  const ventaId = Number(formData.get("venta_id"));
+  const motivo = String(formData.get("motivo") ?? "").trim();
+
+  if (!Number.isInteger(ventaId)) {
+    return { error: "La venta no es válida." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("anular_venta", {
+    p_venta_id: ventaId,
+    p_motivo: motivo || null,
+  });
+
+  if (error) {
+    console.error("[ventas] error al anular venta:", error);
+    const mensaje = error?.message ?? "";
+    if (mensaje === "VENTA_YA_ANULADA") {
+      return { error: "Esta venta ya fue anulada." };
+    }
+    if (mensaje === "VENTA_NO_EXISTE") {
+      return { error: "La venta ya no existe." };
+    }
+    return {
+      error:
+        MENSAJES_ERROR[mensaje] ??
+        `No se pudo anular la venta. Detalle: ${mensaje || "Error desconocido"}`,
+    };
+  }
+
+  revalidatePath("/inventario");
+  revalidatePath("/inventario/movimientos");
+  revalidatePath("/productos");
+  revalidatePath("/catalogo");
+  revalidatePath("/ventas/historial");
+  revalidatePath("/reportes");
+
+  redirect(`/ventas/${ventaId}`);
 }

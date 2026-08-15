@@ -17,7 +17,12 @@ type ProductoStock = {
   categoria: string;
 };
 type MovimientoReporte = {
-  tipo_movimiento: "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA";
+  tipo_movimiento:
+    | "ENTRADA"
+    | "SALIDA"
+    | "AJUSTE"
+    | "VENTA"
+    | "ANULACION";
   cantidad: number;
   productos: {
     categoria_id: number | null;
@@ -49,6 +54,7 @@ const etiquetaMovimiento: Record<string, string> = {
   SALIDA: "Salidas",
   AJUSTE: "Ajustes",
   VENTA: "Ventas (stock)",
+  ANULACION: "Anulaciones (stock)",
 };
 
 type Tab = "ventas" | "inventario" | "cotizaciones";
@@ -96,6 +102,7 @@ export function ReportesTabs({ datos }: { datos: ReportesDatos }) {
       SALIDA: { registros: 0, unidades: 0 },
       AJUSTE: { registros: 0, unidades: 0 },
       VENTA: { registros: 0, unidades: 0 },
+      ANULACION: { registros: 0, unidades: 0 },
     };
     for (const m of movimientosFiltrados) {
       r[m.tipo_movimiento].registros += 1;
@@ -412,7 +419,8 @@ export function ReportesTabs({ datos }: { datos: ReportesDatos }) {
                 {resumenMovimientos.ENTRADA.registros +
                   resumenMovimientos.SALIDA.registros +
                   resumenMovimientos.AJUSTE.registros +
-                  resumenMovimientos.VENTA.registros ===
+                  resumenMovimientos.VENTA.registros +
+                  resumenMovimientos.ANULACION.registros ===
                 0 ? (
                   <p className="text-sm text-base-content/50">
                     Sin movimientos en el período.

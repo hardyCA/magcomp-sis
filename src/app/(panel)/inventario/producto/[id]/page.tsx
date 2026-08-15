@@ -338,5 +338,6 @@ function badgeTipo(tipo: string) {
   if (tipo === "ENTRADA") return "badge-success";
   if (tipo === "SALIDA") return "badge-warning";
   if (tipo === "AJUSTE") return "badge-info";
+  if (tipo === "ANULACION") return "badge-error";
   return "badge-neutral";
 }

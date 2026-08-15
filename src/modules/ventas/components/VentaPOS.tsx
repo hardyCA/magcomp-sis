@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { registrarVenta, type VentaState } from "@/modules/ventas/actions";
 import { formatMoneda, convertirPrecio } from "@/utils/format";
 import { esMoneda, type Moneda } from "@/utils/moneda";
@@ -19,16 +26,18 @@ export type ProductoVenta = {
   stock: number;
 };
 
-type ItemCarrito = { producto_id: number; cantidad: number };
+type ItemCarrito = { producto: ProductoVenta; cantidad: number };
 
 export function VentaPOS({
-  productos,
+  productosIniciales,
+  totalPaginasInicial,
   clientes,
   tasa,
   monedaBase,
   monedaDisplay,
 }: {
-  productos: ProductoVenta[];
+  productosIniciales: ProductoVenta[];
+  totalPaginasInicial: number;
   clientes: ClienteVenta[];
   tasa: number;
   monedaBase: Moneda;
@@ -44,39 +53,69 @@ export function VentaPOS({
   const [descuento, setDescuento] = useState("0");
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [pagina, setPagina] = useState(1);
+  const [productosPagina, setProductosPagina] =
+    useState<ProductoVenta[]>(productosIniciales);
+  const [totalPaginas, setTotalPaginas] = useState(totalPaginasInicial);
+  const [cargando, setCargando] = useState(false);
 
   const inputBusqueda = useRef<HTMLInputElement>(null);
+  const cacheRef = useRef<Map<number, ProductoVenta[]>>(
+    new Map([[1, productosIniciales]])
+  );
+  const primerRender = useRef(true);
+
+  const cargarPagina = useCallback(async (n: number, q: string) => {
+    setCargando(true);
+    try {
+      const res = await fetch(
+        `/api/productos?pagina=${n}&q=${encodeURIComponent(q.trim())}`
+      );
+      if (!res.ok) throw new Error("error");
+      const data = (await res.json()) as {
+        productos: ProductoVenta[];
+        totalPaginas: number;
+      };
+      cacheRef.current.set(n, data.productos ?? []);
+      setProductosPagina(data.productos ?? []);
+      setTotalPaginas(data.totalPaginas ?? 1);
+      setPagina(n);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (primerRender.current) {
+      primerRender.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      cacheRef.current.clear();
+      setPagina(1);
+      cargarPagina(1, busqueda);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busqueda, cargarPagina]);
 
   const hayConversion = moneda !== monedaBase;
 
-  const productosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    const base = productos.filter(
-      (p) => p.stock > 0 && !carrito.some((i) => i.producto_id === p.id)
-    );
-    if (!q) return base;
-    return base.filter(
-      (p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        (p.codigo_barras ?? "").toLowerCase().includes(q)
-    );
-  }, [busqueda, productos, carrito]);
-
   const items = useMemo(() => {
-    return carrito
-      .map((item) => {
-        const producto = productos.find((p) => p.id === item.producto_id);
-        if (!producto) return null;
-        const precioUnitario = convertirPrecio(
-          producto.precio_venta,
-          producto.moneda,
-          moneda,
-          tasa
-        );
-        return { ...item, producto, precioUnitario, lineTotal: precioUnitario * item.cantidad };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [carrito, productos, moneda, tasa]);
+    return carrito.map((item) => {
+      const { producto } = item;
+      const precioUnitario = convertirPrecio(
+        producto.precio_venta,
+        producto.moneda,
+        moneda,
+        tasa
+      );
+      return {
+        ...item,
+        producto,
+        precioUnitario,
+        lineTotal: precioUnitario * item.cantidad,
+      };
+    });
+  }, [carrito, moneda, tasa]);
 
   const subtotal = items.reduce((acc, item) => acc + item.lineTotal, 0);
   const descuentoNum = Math.max(0, Number(descuento) || 0);
@@ -84,51 +123,44 @@ export function VentaPOS({
   const cantidadTotal = items.reduce((acc, item) => acc + item.cantidad, 0);
   const descuentoExcede = subtotal > 0 && descuentoNum > subtotal;
 
-  const POR_PAGINA = 9;
-  const totalPaginas = Math.max(
-    1,
-    Math.ceil(productosFiltrados.length / POR_PAGINA)
-  );
   const paginaActual = Math.min(pagina, totalPaginas);
-  const productosPagina = productosFiltrados.slice(
-    (paginaActual - 1) * POR_PAGINA,
-    paginaActual * POR_PAGINA
-  );
 
   function irPagina(nueva: number) {
-    setPagina(Math.min(totalPaginas, Math.max(1, nueva)));
+    const objetivo = Math.min(totalPaginas, Math.max(1, nueva));
+    if (objetivo === pagina) return;
+    cargarPagina(objetivo, busqueda);
   }
 
   function agregar(producto: ProductoVenta) {
     if (producto.stock <= 0) return;
     setCarrito((prev) => {
-      const existente = prev.find((i) => i.producto_id === producto.id);
+      const existente = prev.find((i) => i.producto.id === producto.id);
       if (existente) {
         if (existente.cantidad >= producto.stock) return prev;
         return prev.map((i) =>
-          i.producto_id === producto.id
+          i.producto.id === producto.id
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         );
       }
-      return [...prev, { producto_id: producto.id, cantidad: 1 }];
+      return [...prev, { producto, cantidad: 1 }];
     });
   }
 
   function cambiarCantidad(productoId: number, cantidad: number) {
-    const producto = productos.find((p) => p.id === productoId);
-    if (!producto) return;
-    const limite = Math.max(1, producto.stock);
-    const valor = Math.min(limite, Math.max(1, cantidad));
-    setCarrito((prev) =>
-      prev.map((i) =>
-        i.producto_id === productoId ? { ...i, cantidad: valor } : i
-      )
-    );
+    setCarrito((prev) => {
+      const item = prev.find((i) => i.producto.id === productoId);
+      if (!item) return prev;
+      const limite = Math.max(1, item.producto.stock);
+      const valor = Math.min(limite, Math.max(1, cantidad));
+      return prev.map((i) =>
+        i.producto.id === productoId ? { ...i, cantidad: valor } : i
+      );
+    });
   }
 
   function quitar(productoId: number) {
-    setCarrito((prev) => prev.filter((i) => i.producto_id !== productoId));
+    setCarrito((prev) => prev.filter((i) => i.producto.id !== productoId));
   }
 
   function elegirMoneda(valor: string) {
@@ -137,16 +169,19 @@ export function VentaPOS({
     }
   }
 
-  function manejarBusqueda(e: React.FormEvent) {
+  async function manejarBusqueda(e: React.FormEvent) {
     e.preventDefault();
     const q = busqueda.trim().toLowerCase();
     if (!q) return;
+    const res = await fetch(`/api/productos?q=${encodeURIComponent(q)}&pagina=1`);
+    const data = (await res.json()) as { productos?: ProductoVenta[] };
+    const resultados = data.productos ?? [];
     const coincidencia =
-      productosFiltrados.find(
+      resultados.find(
         (p) => (p.codigo_barras ?? "").toLowerCase() === q
       ) ??
-      productosFiltrados.find((p) => p.nombre.toLowerCase() === q) ??
-      productosFiltrados[0];
+      resultados.find((p) => p.nombre.toLowerCase() === q) ??
+      resultados[0];
     if (coincidencia && coincidencia.stock > 0) {
       agregar(coincidencia);
     }
@@ -186,7 +221,12 @@ export function VentaPOS({
             </div>
           </form>
 
-          {productosFiltrados.length === 0 ? (
+          {cargando ? (
+            <div className="mt-6 flex items-center justify-center gap-2 rounded-box border border-dashed border-base-300 bg-base-100 p-10 text-base-content/60">
+              <span className="loading loading-spinner loading-sm"></span>
+              <span>Cargando productos...</span>
+            </div>
+          ) : productosPagina.length === 0 ? (
             <div className="mt-6 rounded-box border border-dashed border-base-300 bg-base-100 p-10 text-center text-base-content/60">
               <p>No se encontraron productos disponibles con ese nombre o código.</p>
             </div>
@@ -199,6 +239,9 @@ export function VentaPOS({
                   moneda,
                   tasa
                 );
+                const cantidad =
+                  carrito.find((i) => i.producto.id === producto.id)?.cantidad ??
+                  0;
 
                 return (
                   <button
@@ -206,7 +249,9 @@ export function VentaPOS({
                     type="button"
                     onClick={() => agregar(producto)}
                     aria-label={`Agregar ${producto.nombre} al carrito`}
-                    className="card overflow-hidden bg-base-100 text-left shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className={`card overflow-hidden bg-base-100 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      cantidad > 0 ? "ring-2 ring-primary" : "hover:shadow-md"
+                    }`}
                   >
                     <figure className="h-24 bg-base-200">
                       {producto.imagen ? (
@@ -225,26 +270,21 @@ export function VentaPOS({
                       )}
                     </figure>
                     <div className="card-body p-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold leading-tight">
-                            {producto.nombre}
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold leading-snug">
+                          {producto.nombre}
+                        </p>
+                        {producto.codigo_barras ? (
+                          <p className="font-mono text-xs text-base-content/50">
+                            {producto.codigo_barras}
                           </p>
-                          {producto.codigo_barras ? (
-                            <p className="font-mono text-xs text-base-content/50">
-                              {producto.codigo_barras}
-                            </p>
-                          ) : null}
-                        </div>
-                        <StockTag stock={producto.stock} />
+                        ) : null}
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-base font-bold">
                           {formatMoneda(precio, moneda)}
                         </span>
-                        <span className="badge badge-outline badge-sm">
-                          Agregar
-                        </span>
+                        <StockTag stock={producto.stock} />
                       </div>
                     </div>
                   </button>
@@ -352,21 +392,7 @@ export function VentaPOS({
               ) : (
                 <ul className="divide-y divide-base-200">
                   {items.map((item) => (
-                    <li key={item.producto_id} className="flex items-center gap-2.5 py-2.5">
-                      {item.producto.imagen ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.producto.imagen}
-                          alt={item.producto.nombre}
-                          className="h-9 w-9 shrink-0 rounded-box border border-base-300 object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-200 text-base-content/40">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                          </svg>
-                        </span>
-                      )}
+                    <li key={item.producto.id} className="flex items-center gap-2.5 py-2.5">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <p className="truncate font-medium leading-tight">
@@ -385,7 +411,7 @@ export function VentaPOS({
                               type="button"
                               className="btn btn-outline btn-xs btn-square join-item"
                               onClick={() =>
-                                cambiarCantidad(item.producto_id, item.cantidad - 1)
+                                cambiarCantidad(item.producto.id, item.cantidad - 1)
                               }
                             >
                               −
@@ -397,7 +423,7 @@ export function VentaPOS({
                               value={item.cantidad}
                               onChange={(e) =>
                                 cambiarCantidad(
-                                  item.producto_id,
+                                  item.producto.id,
                                   Number(e.target.value)
                                 )
                               }
@@ -407,7 +433,7 @@ export function VentaPOS({
                               type="button"
                               className="btn btn-outline btn-xs btn-square join-item"
                               onClick={() =>
-                                cambiarCantidad(item.producto_id, item.cantidad + 1)
+                                cambiarCantidad(item.producto.id, item.cantidad + 1)
                               }
                             >
                               +
@@ -416,7 +442,7 @@ export function VentaPOS({
                           <button
                             type="button"
                             className="btn btn-ghost btn-xs text-error"
-                            onClick={() => quitar(item.producto_id)}
+                            onClick={() => quitar(item.producto.id)}
                           >
                             Quitar
                           </button>
@@ -478,7 +504,7 @@ export function VentaPOS({
                 name="items"
                 value={JSON.stringify(
                   items.map((i) => ({
-                    producto_id: i.producto_id,
+                    producto_id: i.producto.id,
                     cantidad: i.cantidad,
                   }))
                 )}

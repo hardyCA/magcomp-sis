@@ -208,7 +208,12 @@ export type Database = {
         Row: {
           id: number;
           producto_id: number;
-          tipo_movimiento: "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA";
+          tipo_movimiento:
+            | "ENTRADA"
+            | "SALIDA"
+            | "AJUSTE"
+            | "VENTA"
+            | "ANULACION";
           cantidad: number;
           stock_anterior: number;
           stock_nuevo: number;
@@ -219,7 +224,12 @@ export type Database = {
         Insert: {
           id?: number;
           producto_id: number;
-          tipo_movimiento: "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA";
+          tipo_movimiento:
+            | "ENTRADA"
+            | "SALIDA"
+            | "AJUSTE"
+            | "VENTA"
+            | "ANULACION";
           cantidad: number;
           stock_anterior: number;
           stock_nuevo: number;
@@ -230,7 +240,12 @@ export type Database = {
         Update: {
           id?: number;
           producto_id?: number;
-          tipo_movimiento?: "ENTRADA" | "SALIDA" | "AJUSTE" | "VENTA";
+          tipo_movimiento?:
+            | "ENTRADA"
+            | "SALIDA"
+            | "AJUSTE"
+            | "VENTA"
+            | "ANULACION";
           cantidad?: number;
           stock_anterior?: number;
           stock_nuevo?: number;
@@ -267,6 +282,10 @@ export type Database = {
           descuento: number;
           total: number;
           cliente_id: number | null;
+          estado: "ACTIVA" | "ANULADA";
+          motivo_anulacion: string | null;
+          anulada_por: string | null;
+          anulada_en: string | null;
           created_at: string;
         };
         Insert: {
@@ -280,6 +299,10 @@ export type Database = {
           descuento?: number;
           total?: number;
           cliente_id?: number | null;
+          estado?: "ACTIVA" | "ANULADA";
+          motivo_anulacion?: string | null;
+          anulada_por?: string | null;
+          anulada_en?: string | null;
           created_at?: string;
         };
         Update: {
@@ -293,6 +316,10 @@ export type Database = {
           descuento?: number;
           total?: number;
           cliente_id?: number | null;
+          estado?: "ACTIVA" | "ANULADA";
+          motivo_anulacion?: string | null;
+          anulada_por?: string | null;
+          anulada_en?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -618,6 +645,29 @@ export type Database = {
           descuento: number;
           total: number;
           cliente_id: number | null;
+          created_at: string;
+        };
+      };
+      anular_venta: {
+        Args: {
+          p_venta_id: number;
+          p_motivo?: string | null;
+        };
+        Returns: {
+          id: number;
+          numero: string;
+          usuario_id: string;
+          fecha: string;
+          moneda: "BOB" | "USD";
+          tipo_cambio: number;
+          subtotal: number;
+          descuento: number;
+          total: number;
+          cliente_id: number | null;
+          estado: "ACTIVA" | "ANULADA";
+          motivo_anulacion: string | null;
+          anulada_por: string | null;
+          anulada_en: string | null;
           created_at: string;
         };
       };

@@ -6,7 +6,7 @@ export default async function VentasHistorialPage({
 }: {
   searchParams: Promise<{ pagina?: string | string[] }>;
 }) {
-  await requirePermiso("historial_ventas");
+  const profile = await requirePermiso("historial_ventas");
 
   const sp = await searchParams;
   const paginaRaw = Array.isArray(sp.pagina) ? sp.pagina[0] ?? "1" : sp.pagina ?? "1";
@@ -21,7 +21,10 @@ export default async function VentasHistorialPage({
         </p>
       </div>
 
-      <VentasLista pagina={pagina} />
+      <VentasLista
+        pagina={pagina}
+        esAdmin={profile.rol === "ADMINISTRADOR"}
+      />
     </div>
   );
 }
