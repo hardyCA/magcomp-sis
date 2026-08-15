@@ -78,9 +78,6 @@ export function ReportesTabs({ datos }: { datos: ReportesDatos }) {
   } = datos;
 
   const categoriasDisponibles = productosPorCategoria.map(([c]) => c);
-  const mostrarTodas =
-    categoriasSeleccionadas === null ||
-    categoriasDisponibles.every((c) => categoriasSeleccionadas.has(c));
   const categoriasVisibles =
     categoriasSeleccionadas === null
       ? productosPorCategoria
@@ -285,7 +282,7 @@ export function ReportesTabs({ datos }: { datos: ReportesDatos }) {
                   </div>
                   <p className="mt-2 text-xs text-base-content/50">
                     El filtro aplica a productos, stock bajo y movimientos. Con
-                    "Mostrar todas" se ven todas las categorías.
+                    &ldquo;Mostrar todas&rdquo; se ven todas las categorías.
                   </p>
                 </div>
               </div>
