@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/config";
 import { type Moneda } from "@/utils/moneda";
@@ -8,7 +8,7 @@ import {
 } from "@/modules/ventas/components/VentaPOS";
 
 export default async function VentasPage() {
-  await requireUser();
+  await requirePermiso("ventas");
 
   const supabase = await createClient();
 

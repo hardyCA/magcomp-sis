@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/session";
+import { obtenerPermisos } from "@/lib/permisos";
 import { getTipoCambioGlobal, getMonedaDisplay } from "@/lib/config";
 import { Sidebar } from "@/modules/dashboard/components/Sidebar";
 
@@ -8,8 +9,9 @@ export default async function PanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [profile, tasa, monedaDisplay] = await Promise.all([
+  const [profile, permisos, tasa, monedaDisplay] = await Promise.all([
     getProfile(),
+    obtenerPermisos(),
     getTipoCambioGlobal(),
     getMonedaDisplay(),
   ]);
@@ -22,6 +24,7 @@ export default async function PanelLayout({
     <Sidebar
       nombre={profile.nombre}
       rol={profile.rol}
+      permisos={permisos}
       tasa={tasa}
       monedaDisplay={monedaDisplay}
     >

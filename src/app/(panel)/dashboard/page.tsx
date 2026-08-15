@@ -1,12 +1,8 @@
-import { getProfile } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const profile = await getProfile();
-
-  if (!profile) {
-    return null;
-  }
+  const profile = await requirePermiso("dashboard");
 
   const esAdmin = profile.rol === "ADMINISTRADOR";
 

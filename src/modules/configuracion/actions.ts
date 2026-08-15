@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 
 export type TipoCambioState = { error?: string } | undefined;
@@ -11,6 +12,7 @@ export async function actualizarTipoCambio(
   _prevState: TipoCambioState,
   formData: FormData
 ): Promise<TipoCambioState> {
+  await requireAdmin();
   const raw = String(formData.get("valor") ?? "").replace(",", ".");
   const valor = Number(raw);
 
@@ -37,6 +39,7 @@ export async function actualizarMonedaBase(
   _prevState: MonedaBaseState,
   formData: FormData
 ): Promise<MonedaBaseState> {
+  await requireAdmin();
   const moneda = String(formData.get("moneda_principal") ?? "");
 
   if (moneda !== "BOB" && moneda !== "USD") {

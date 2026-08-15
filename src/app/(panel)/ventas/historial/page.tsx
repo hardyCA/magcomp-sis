@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { VentasLista } from "@/modules/ventas/components/VentasLista";
 
 export default async function VentasHistorialPage({
@@ -6,7 +6,7 @@ export default async function VentasHistorialPage({
 }: {
   searchParams: Promise<{ pagina?: string | string[] }>;
 }) {
-  await requireUser();
+  await requirePermiso("historial_ventas");
 
   const sp = await searchParams;
   const paginaRaw = Array.isArray(sp.pagina) ? sp.pagina[0] ?? "1" : sp.pagina ?? "1";

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 
 export type MarcaState = { error?: string } | undefined;
@@ -17,6 +18,7 @@ export async function crearMarca(
   _prevState: MarcaState,
   formData: FormData
 ): Promise<MarcaState> {
+  await requireAdmin();
   const nombre = String(formData.get("nombre") ?? "").trim();
 
   if (!nombre) {
@@ -35,6 +37,7 @@ export async function crearMarca(
 }
 
 export async function actualizarMarca(formData: FormData): Promise<void> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
   const nombre = String(formData.get("nombre") ?? "").trim();
 
@@ -48,6 +51,7 @@ export async function actualizarMarca(formData: FormData): Promise<void> {
 }
 
 export async function eliminarMarca(formData: FormData): Promise<void> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
 
   if (!id) return;

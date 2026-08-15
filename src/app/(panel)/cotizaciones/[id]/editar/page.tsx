@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/config";
 import { type Moneda } from "@/utils/moneda";
@@ -15,7 +15,7 @@ export default async function EditarCotizacionPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  await requirePermiso("cotizaciones");
 
   const { id } = await params;
   const cotizacionId = Number(id);

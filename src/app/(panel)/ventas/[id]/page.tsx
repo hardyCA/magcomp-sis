@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerNombresUsuarios } from "@/lib/profiles";
 import { formatMoneda } from "@/utils/format";
@@ -20,7 +20,7 @@ export default async function VentaDetallePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  await requirePermiso("ventas");
 
   const { id } = await params;
   const supabase = await createClient();

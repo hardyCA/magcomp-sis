@@ -507,6 +507,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      modulos: {
+        Row: {
+          id: number;
+          clave: string;
+          nombre: string;
+          orden: number;
+        };
+        Insert: {
+          id?: number;
+          clave: string;
+          nombre: string;
+          orden?: number;
+        };
+        Update: {
+          id?: number;
+          clave?: string;
+          nombre?: string;
+          orden?: number;
+        };
+        Relationships: [];
+      };
+      rol_permisos: {
+        Row: {
+          rol_id: number;
+          modulo_id: number;
+        };
+        Insert: {
+          rol_id: number;
+          modulo_id: number;
+        };
+        Update: {
+          rol_id?: number;
+          modulo_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rol_permisos_rol_id_fkey";
+            columns: ["rol_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rol_permisos_modulo_id_fkey";
+            columns: ["modulo_id"];
+            isOneToOne: false;
+            referencedRelation: "modulos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -525,6 +576,10 @@ export type Database = {
           activo: boolean;
           created_at: string;
         }[];
+      };
+      permisos_usuario: {
+        Args: Record<string, never>;
+        Returns: string[];
       };
       registrar_movimiento_inventario: {
         Args: {

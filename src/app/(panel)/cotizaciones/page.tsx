@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoneda } from "@/utils/format";
 import { type Moneda } from "@/utils/moneda";
@@ -21,7 +21,7 @@ export default async function CotizacionesPage({
 }: {
   searchParams: Promise<{ estado?: string | string[] }>;
 }) {
-  await requireUser();
+  await requirePermiso("cotizaciones");
 
   const sp = await searchParams;
   const estadoRaw = Array.isArray(sp.estado) ? sp.estado[0] ?? "" : sp.estado ?? "";

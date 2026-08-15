@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfile } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerNombresUsuarios } from "@/lib/profiles";
 import { MovimientoForm } from "@/modules/inventario/components/MovimientoForm";
@@ -57,11 +57,7 @@ export default async function ProductoInventarioPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const profile = await getProfile();
-
-  if (!profile) {
-    return null;
-  }
+  const profile = await requirePermiso("inventario");
 
   const { id } = await params;
   const productoId = Number(id);

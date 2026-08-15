@@ -6,48 +6,47 @@ import { logout } from "@/modules/auth/actions";
 import { CurrencySwitcher } from "@/modules/dashboard/components/CurrencySwitcher";
 import { type Moneda } from "@/utils/moneda";
 
-type NavLink = { href: string; label: string };
+type NavLink = { href: string; label: string; modulo: string };
 
 export function Sidebar({
   nombre,
   rol,
+  permisos,
   tasa,
   monedaDisplay,
   children,
 }: {
   nombre: string;
   rol: string | null;
+  permisos: string[];
   tasa: number;
   monedaDisplay: Moneda;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const esAdmin = rol === "ADMINISTRADOR";
 
   const links: NavLink[] = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/ventas", label: "Ventas" },
-    { href: "/ventas/historial", label: "Historial de ventas" },
-    { href: "/cotizaciones", label: "Cotizaciones" },
-    { href: "/inventario", label: "Inventario" },
-    ...(esAdmin
-      ? [
-          { href: "/productos", label: "Productos" },
-          { href: "/categorias", label: "Categorías" },
-          { href: "/marcas", label: "Marcas" },
-          { href: "/clientes", label: "Clientes" },
-          { href: "/reportes", label: "Reportes" },
-          { href: "/usuarios", label: "Usuarios y roles" },
-          { href: "/configuracion", label: "Configuración" },
-        ]
-      : []),
-    { href: "/catalogo", label: "Catálogo" },
+    { href: "/dashboard", label: "Dashboard", modulo: "dashboard" },
+    { href: "/ventas", label: "Ventas", modulo: "ventas" },
+    { href: "/ventas/historial", label: "Historial de ventas", modulo: "historial_ventas" },
+    { href: "/cotizaciones", label: "Cotizaciones", modulo: "cotizaciones" },
+    { href: "/inventario", label: "Inventario", modulo: "inventario" },
+    { href: "/productos", label: "Productos", modulo: "productos" },
+    { href: "/categorias", label: "Categorías", modulo: "categorias" },
+    { href: "/marcas", label: "Marcas", modulo: "marcas" },
+    { href: "/clientes", label: "Clientes", modulo: "clientes" },
+    { href: "/reportes", label: "Reportes", modulo: "reportes" },
+    { href: "/usuarios", label: "Usuarios y roles", modulo: "usuarios" },
+    { href: "/configuracion", label: "Configuración", modulo: "configuracion" },
+    { href: "/catalogo", label: "Catálogo", modulo: "catalogo" },
   ];
+
+  const visibles = links.filter((l) => permisos.includes(l.modulo));
 
   const isActive = (href: string) => {
     const coincide = (l: NavLink) =>
       pathname === l.href || pathname.startsWith(`${l.href}/`);
-    const candidatos = links.filter(coincide);
+    const candidatos = visibles.filter(coincide);
     const masEspecifico = candidatos.reduce<NavLink | null>(
       (mejor, l) =>
         !mejor || l.href.length > mejor.href.length ? l : mejor,
@@ -104,7 +103,7 @@ export function Sidebar({
 
           <nav className="flex-1">
             <ul className="menu gap-1 p-0">
-              {links.map((link) => (
+              {visibles.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -124,7 +123,7 @@ export function Sidebar({
                   {nombre}
                 </p>
                 <p className="text-xs text-base-content/60">
-                  {esAdmin ? "Administrador" : rol ?? "Usuario"}
+                  {rol ?? "Usuario"}
                 </p>
               </div>
               <form action={logout}>

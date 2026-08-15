@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProfile } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerNombresUsuarios } from "@/lib/profiles";
 import { TIPOS_MOVIMIENTO } from "@/modules/inventario/constantes";
@@ -59,11 +59,7 @@ export default async function MovimientosPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const profile = await getProfile();
-
-  if (!profile) {
-    return null;
-  }
+  const profile = await requirePermiso("inventario");
 
   const sp = await searchParams;
   const tipo = soloUno(sp.tipo);

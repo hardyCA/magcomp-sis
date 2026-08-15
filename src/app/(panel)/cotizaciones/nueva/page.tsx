@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/config";
 import { type Moneda } from "@/utils/moneda";
@@ -9,7 +9,7 @@ import {
 } from "@/modules/cotizaciones/components/CotizacionForm";
 
 export default async function NuevaCotizacionPage() {
-  await requireUser();
+  await requirePermiso("cotizaciones");
 
   const supabase = await createClient();
 

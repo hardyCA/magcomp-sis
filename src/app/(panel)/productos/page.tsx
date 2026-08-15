@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getMonedaBase, getMonedaDisplay, getTipoCambioGlobal } from "@/lib/config";
 import { formatMoneda, convertirPrecio } from "@/utils/format";
@@ -55,7 +55,8 @@ export default async function ProductosPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireAdmin();
+  const profile = await requirePermiso("productos");
+  const esAdmin = profile.rol === "ADMINISTRADOR";
 
   const sp = await searchParams;
   const q = soloUno(sp.q).trim();
@@ -136,9 +137,11 @@ export default async function ProductosPage({
             {hayConversion ? ` (guardados en ${monedaBase})` : ""}
           </p>
         </div>
-        <Link href="/productos/nuevo" className="btn btn-primary">
-          Nuevo producto
-        </Link>
+        {esAdmin ? (
+          <Link href="/productos/nuevo" className="btn btn-primary">
+            Nuevo producto
+          </Link>
+        ) : null}
       </div>
 
       <FiltrosProductos
@@ -163,9 +166,11 @@ export default async function ProductosPage({
         <div className="card bg-base-100 shadow">
           <div className="card-body items-center py-10 text-center">
             <p className="text-base-content/60">No se encontraron productos.</p>
-            <Link href="/productos/nuevo" className="btn btn-primary mt-2">
-              Crear el primero
-            </Link>
+            {esAdmin ? (
+              <Link href="/productos/nuevo" className="btn btn-primary mt-2">
+                Crear el primero
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -243,21 +248,23 @@ export default async function ProductosPage({
                               </span>
                             </td>
                             <td className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Link href={`/productos/${producto.id}/editar`} className="btn btn-ghost btn-sm">
-                                  Editar
-                                </Link>
-                                <form action={toggleProducto}>
-                                  <input type="hidden" name="id" value={producto.id} />
-                                  <input type="hidden" name="activo" value={producto.activo ? "1" : "0"} />
-                                  <button
-                                    type="submit"
-                                    className={`btn btn-sm ${producto.activo ? "btn-outline" : "btn-success"}`}
-                                  >
-                                    {producto.activo ? "Inactivar" : "Activar"}
-                                  </button>
-                                </form>
-                              </div>
+                              {esAdmin ? (
+                                <div className="flex justify-end gap-2">
+                                  <Link href={`/productos/${producto.id}/editar`} className="btn btn-ghost btn-sm">
+                                    Editar
+                                  </Link>
+                                  <form action={toggleProducto}>
+                                    <input type="hidden" name="id" value={producto.id} />
+                                    <input type="hidden" name="activo" value={producto.activo ? "1" : "0"} />
+                                    <button
+                                      type="submit"
+                                      className={`btn btn-sm ${producto.activo ? "btn-outline" : "btn-success"}`}
+                                    >
+                                      {producto.activo ? "Inactivar" : "Activar"}
+                                    </button>
+                                  </form>
+                                </div>
+                              ) : null}
                             </td>
                           </tr>
                         );

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { obtenerPermisos } from "@/lib/permisos";
 
 export type UserProfile = {
   id: string;
@@ -39,6 +40,21 @@ export const getProfile = cache(async (): Promise<UserProfile | null> => {
     rol,
   };
 });
+
+export async function requirePermiso(modulo: string): Promise<UserProfile> {
+  const profile = await getProfile();
+
+  if (!profile || !profile.activo) {
+    redirect("/login?inactivo=1");
+  }
+
+  const permisos = await obtenerPermisos();
+  if (!permisos.includes(modulo)) {
+    redirect("/dashboard");
+  }
+
+  return profile;
+}
 
 export async function requireUser() {
   const profile = await getProfile();

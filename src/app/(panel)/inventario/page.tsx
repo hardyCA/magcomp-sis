@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProfile } from "@/lib/session";
+import { requirePermiso } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { FiltroCategorias } from "@/components/FiltroCategorias";
 import { FiltroMarcas } from "@/components/FiltroMarcas";
@@ -52,11 +52,7 @@ export default async function InventarioPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const profile = await getProfile();
-
-  if (!profile) {
-    return null;
-  }
+  await requirePermiso("inventario");
 
   const sp = await searchParams;
   const q = soloUno(sp.q).trim();

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import {
   getMonedaBase,
@@ -132,6 +133,7 @@ export async function crearProducto(
   _prevState: ProductoState,
   formData: FormData
 ): Promise<ProductoState> {
+  await requireAdmin();
   const resultado = validar(formData);
 
   if ("error" in resultado) {
@@ -177,6 +179,7 @@ export async function actualizarProducto(
   _prevState: ProductoState,
   formData: FormData
 ): Promise<ProductoState> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
   const resultado = validar(formData);
 
@@ -251,6 +254,7 @@ export async function actualizarProducto(
 }
 
 export async function toggleProducto(formData: FormData): Promise<void> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
   const activo = formData.get("activo") === "1";
 
