@@ -209,9 +209,23 @@ export async function GET() {
 
   const altoFila = 34;
 
+  const dibujarEncabezados = () => {
+    page.drawText("Producto", { x: MARGEN + 40, y: y - 8, size: 8.5, font: bold, color: GRIS });
+    page.drawText("Código", { x: MARGEN + anchoProducto, y: y - 8, size: 8.5, font: bold, color: GRIS });
+    page.drawText("Marca", { x: MARGEN + anchoProducto + anchoCodigo, y: y - 8, size: 8.5, font: bold, color: GRIS });
+    page.drawText("Precio", {
+      x: MARGEN + anchoProducto + anchoCodigo + anchoMarca + anchoPrecio - regular.widthOfTextAtSize("Precio", 8.5),
+      y: y - 8,
+      size: 8.5,
+      font: bold,
+      color: GRIS,
+    });
+  };
+
   for (const [categoria, grupo] of agrupados) {
-    const espacioNecesario = 24 + 18 + grupo.length * altoFila;
-    if (y - espacioNecesario < MARGEN) {
+    // Espacio mínimo para dibujar el título de la categoría y al menos una fila.
+    // Las categorías grandes se reparten entre páginas.
+    if (y - (29 + 14 + altoFila) < MARGEN) {
       nuevaPagina();
     }
 
@@ -224,25 +238,26 @@ export async function GET() {
     });
     y = y - 29;
 
-    page.drawText("Producto", { x: MARGEN + 40, y: y - 8, size: 8.5, font: bold, color: GRIS });
-    page.drawText("Código", { x: MARGEN + anchoProducto, y: y - 8, size: 8.5, font: bold, color: GRIS });
-    page.drawText("Marca", { x: MARGEN + anchoProducto + anchoCodigo, y: y - 8, size: 8.5, font: bold, color: GRIS });
-    page.drawText("Precio", {
-      x: MARGEN + anchoProducto + anchoCodigo + anchoMarca + anchoPrecio - regular.widthOfTextAtSize("Precio", 8.5),
-      y: y - 8,
-      size: 8.5,
-      font: bold,
-      color: GRIS,
-    });
+    dibujarEncabezados();
     y = y - 14;
 
-    for (let i = 0; i < grupo.length; i++) {
-      const p = grupo[i];
+    let filaIdx = 0;
+    for (const p of grupo) {
       if (y - altoFila < MARGEN) {
         nuevaPagina();
+        page.drawText(categoria, { x: MARGEN, y: y - 11, size: 13, font: bold, color: OSCURO });
+        page.drawLine({
+          start: { x: MARGEN, y: y - 17 },
+          end: { x: MARGEN + ancho, y: y - 17 },
+          thickness: 0.6,
+          color: NEGRO,
+        });
+        y = y - 29;
+        dibujarEncabezados();
+        y = y - 14;
       }
 
-      if (i % 2 === 1) {
+      if (filaIdx % 2 === 1) {
         page.drawRectangle({
           x: MARGEN,
           y: y - altoFila,
@@ -251,6 +266,7 @@ export async function GET() {
           color: rgb(0.95, 0.95, 0.95),
         });
       }
+      filaIdx += 1;
 
       let imagen: ImagenProcesada | null = null;
       if (p.imagen) {
